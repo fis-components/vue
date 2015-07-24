@@ -1,6 +1,6 @@
 {
-    "version": "0.12.6",
-    "tag": "0.12.6",
+    "version": "0.12.8",
+    "tag": "0.12.8",
     "repos": "https://github.com/yyx990803/vue",
     "description": "Simple, Fast & Composable MVVM for building interative interfaces",
     "name": "vue",
