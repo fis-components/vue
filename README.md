@@ -1,12 +1,12 @@
 <p align="center"><a href="http://vuejs.org" target="_blank"><img width="100"src="http://vuejs.org/images/logo.png"></a></p>
 
 <p align="center">
-  <a href="https://circleci.com/gh/yyx990803/vue/tree/master"><img src="https://img.shields.io/circleci/project/yyx990803/vue/master.svg" alt="Build Status"></a>
-  <a href="https://codecov.io/github/yyx990803/vue?branch=master"><img src="https://img.shields.io/codecov/c/github/yyx990803/vue/master.svg" alt="Coverage Status"></a>
+  <a href="https://circleci.com/gh/yyx990803/vue/tree/master"><img src="https://circleci.com/gh/yyx990803/vue/tree/master.svg?style=shield" alt="Build Status"></a>
+  <a href="https://codecov.io/github/yyx990803/vue?branch=master"><img src="https://codecov.io/github/yyx990803/vue/coverage.svg?branch=dev" alt="Coverage Status"></a>
   <a href="https://www.bithound.io/github/yyx990803/vue"><img src="https://www.bithound.io/github/yyx990803/vue/badges/score.svg" alt="bitHound Score"></a>
   <br>
-  <a href="https://www.npmjs.com/package/vue"><img src="https://img.shields.io/npm/dm/vue.svg" alt="NPM Downloads"></a>
   <a href="http://issuestats.com/github/yyx990803/vue"><img src="http://issuestats.com/github/yyx990803/vue/badge/issue?style=flat"></a>
+  <a href="https://gitter.im/yyx990803/vue"><img src="https://badges.gitter.im/Join Chat.svg"></a>
 </p>
 
 ## Intro
@@ -23,7 +23,7 @@ Note that Vue.js only supports [ES5-compliant browsers](http://kangax.github.io/
 
 ## Questions
 
-For questions and support please use the Gitter room: [![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/yyx990803/vue) or submit issues at [vuejs/Discussion](https://github.com/vuejs/Discussion/issues). The issue list of this repo is **exclusively** for bug reports and feature requests.
+For questions and support please use the [Gitter chat room](https://gitter.im/yyx990803/vue) or submit issues at [vuejs/Discussion](https://github.com/vuejs/Discussion/issues). The issue list of this repo is **exclusively** for bug reports and feature requests.
 
 ## Issues
 

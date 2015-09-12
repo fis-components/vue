@@ -1,10 +1,11 @@
 /*!
- * Vue.js v0.12.12
+ * Vue.js v0.12.14
  * (c) 2015 Evan You
  * Released under the MIT License.
  */
 
 (function webpackUniversalModuleDefinition(root, factory) {
+    
     module.exports = factory() || module.exports;;
 }(this, function () {
     return function (modules) {
@@ -126,7 +127,7 @@
         },
         function (module, exports) {
             /**
-	 * Check is a string starts with $ or _
+	 * Check if a string starts with $ or _
 	 *
 	 * @param {String} str
 	 * @return {Boolean}
@@ -276,8 +277,9 @@
 	 * @return {Boolean}
 	 */
             var toString = Object.prototype.toString;
+            var OBJECT_STRING = '[object Object]';
             exports.isPlainObject = function (obj) {
-                return toString.call(obj) === '[object Object]';
+                return toString.call(obj) === OBJECT_STRING;
             };
             /**
 	 * Array type check.
@@ -341,7 +343,8 @@
 	 * @param {*} obj
 	 */
             exports.indexOf = function (arr, obj) {
-                for (var i = 0, l = arr.length; i < l; i++) {
+                var i = arr.length;
+                while (i--) {
                     if (arr[i] === obj)
                         return i;
                 }
@@ -4682,6 +4685,7 @@
                 // async state
                 this.pendingCssEvent = this.pendingCssCb = this.cancel = this.pendingJsCb = this.op = this.cb = null;
                 this.justEntered = false;
+                this.entered = this.left = false;
                 this.typeCache = {};
                 // bind
                 var self = this;
@@ -4725,7 +4729,11 @@
                 this.cb = cb;
                 addClass(this.el, this.enterClass);
                 op();
+                this.entered = false;
                 this.callHookWithCb('enter');
+                if (this.entered) {
+                    return;    // user called done synchronously.
+                }
                 this.cancel = this.hooks && this.hooks.enterCancelled;
                 queue.push(this.enterNextTick);
             };
@@ -4739,22 +4747,27 @@
                 _.nextTick(function () {
                     this.justEntered = false;
                 }, this);
-                var type = this.getCssTransitionType(this.enterClass);
                 var enterDone = this.enterDone;
-                if (type === TYPE_TRANSITION) {
-                    // trigger transition by removing enter class now
+                var type = this.getCssTransitionType(this.enterClass);
+                if (!this.pendingJsCb) {
+                    if (type === TYPE_TRANSITION) {
+                        // trigger transition by removing enter class now
+                        removeClass(this.el, this.enterClass);
+                        this.setupCssCb(transitionEndEvent, enterDone);
+                    } else if (type === TYPE_ANIMATION) {
+                        this.setupCssCb(animationEndEvent, enterDone);
+                    } else {
+                        enterDone();
+                    }
+                } else if (type === TYPE_TRANSITION) {
                     removeClass(this.el, this.enterClass);
-                    this.setupCssCb(transitionEndEvent, enterDone);
-                } else if (type === TYPE_ANIMATION) {
-                    this.setupCssCb(animationEndEvent, enterDone);
-                } else if (!this.pendingJsCb) {
-                    enterDone();
                 }
             };
             /**
 	 * The "cleanup" phase of an entering transition.
 	 */
             p.enterDone = function () {
+                this.entered = true;
                 this.cancel = this.pendingJsCb = null;
                 removeClass(this.el, this.enterClass);
                 this.callHook('afterEnter');
@@ -4787,7 +4800,11 @@
                 this.op = op;
                 this.cb = cb;
                 addClass(this.el, this.leaveClass);
+                this.left = false;
                 this.callHookWithCb('leave');
+                if (this.left) {
+                    return;    // user called done synchronously.
+                }
                 this.cancel = this.hooks && this.hooks.leaveCancelled;
                 // only need to handle leaveDone if
                 // 1. the transition is already done (synchronously called
@@ -4820,6 +4837,7 @@
 	 * The "cleanup" phase of a leaving transition.
 	 */
             p.leaveDone = function () {
+                this.left = true;
                 this.cancel = this.pendingJsCb = null;
                 this.op();
                 removeClass(this.el, this.leaveClass);
@@ -5063,9 +5081,10 @@
                         'development' !== 'production' && _.warn('v-model does not support element type: ' + tag);
                         return;
                     }
+                    el.__v_model = this;
                     handler.bind.call(this);
                     this.update = handler.update;
-                    this.unbind = handler.unbind;
+                    this._unbind = handler.unbind;
                 },
                 /**
 	   * Check read/write filter stats.
@@ -5084,6 +5103,10 @@
                             this.hasWrite = true;
                         }
                     }
+                },
+                unbind: function () {
+                    this.el.__v_model = null;
+                    this._unbind && this._unbind();
                 }
             };
         },
@@ -5310,7 +5333,13 @@
                         while (i--) {
                             var option = el.options[i];
                             if (option !== defaultOption) {
-                                el.removeChild(option);
+                                var parentNode = option.parentNode;
+                                if (parentNode === el) {
+                                    parentNode.removeChild(option);
+                                } else {
+                                    el.removeChild(parentNode);
+                                    i = el.options.length;
+                                }
                             }
                         }
                         buildOptions(el, value);
@@ -5478,6 +5507,11 @@
 	   * Setup.
 	   */
                 bind: function () {
+                    // some helpful tips...
+                    /* istanbul ignore if */
+                    if ('development' !== 'production' && this.el.tagName === 'OPTION' && this.el.parentNode && this.el.parentNode.__v_model) {
+                        _.warn('Don\'t use v-repeat for v-model options; ' + 'use the `options` param instead: ' + 'http://vuejs.org/guide/forms.html#Dynamic_Select_Options');
+                    }
                     // support for item in array syntax
                     var inMatch = this.expression.match(/(.*) in (.*)/);
                     if (inMatch) {
@@ -5508,11 +5542,6 @@
                     this.checkComponent();
                     // create cache object
                     this.cache = Object.create(null);
-                    // some helpful tips...
-                    /* istanbul ignore if */
-                    if ('development' !== 'production' && this.el.tagName === 'OPTION') {
-                        _.warn('Don\'t use v-repeat for v-model options; ' + 'use the `options` param instead: ' + 'http://vuejs.org/guide/forms.html#Dynamic_Select_Options');
-                    }
                 },
                 /**
 	   * Warn against v-if usage.
@@ -5616,6 +5645,9 @@
 	   * @param {Array|Number|String} data
 	   */
                 update: function (data) {
+                    if ('development' !== 'production' && !_.isArray(data)) {
+                        _.warn('v-repeat pre-converts Objects into Arrays, and ' + 'v-repeat filters should always return Arrays.');
+                    }
                     if (this.componentId) {
                         var state = this.componentState;
                         if (state === UNRESOLVED) {
@@ -5684,6 +5716,9 @@
                         vm = !init && this.getVm(raw, i, converted ? obj.$key : null);
                         if (vm) {
                             // reusable instance
+                            if ('development' !== 'production' && vm._reused) {
+                                _.warn('Duplicate objects found in v-repeat="' + this.expression + '": ' + JSON.stringify(raw));
+                            }
                             vm._reused = true;
                             vm.$index = i;
                             // update $index
@@ -5862,7 +5897,7 @@
                         if (!cache[id]) {
                             cache[id] = vm;
                         } else if (!primitive && idKey !== '$index') {
-                            'development' !== 'production' && _.warn('Duplicate track-by key in v-repeat: ' + id);
+                            'development' !== 'production' && _.warn('Duplicate objects with the same track-by key in v-repeat: ' + id);
                         }
                     } else {
                         id = this.id;
@@ -5870,7 +5905,7 @@
                             if (data[id] === null) {
                                 data[id] = vm;
                             } else {
-                                'development' !== 'production' && _.warn('Duplicate objects are not supported in v-repeat ' + 'when using components or transitions.');
+                                'development' !== 'production' && _.warn('Duplicate objects found in v-repeat="' + this.expression + '": ' + JSON.stringify(data));
                             }
                         } else {
                             _.define(data, id, vm);
@@ -6188,7 +6223,7 @@
                     this.unlink = null;
                 },
                 getContainedComponents: function () {
-                    var vm = this.vm;
+                    var vm = this._host || this.vm;
                     var start = this.start.nextSibling;
                     var end = this.end;
                     function contains(c) {
@@ -6482,6 +6517,7 @@
                 esc: 27,
                 tab: 9,
                 enter: 13,
+                space: 32,
                 'delete': 46,
                 up: 38,
                 left: 37,
@@ -7085,7 +7121,7 @@
                 var ob;
                 if (value && value.hasOwnProperty('__ob__') && value.__ob__ instanceof Observer) {
                     ob = value.__ob__;
-                } else if (_.isObject(value) && !Object.isFrozen(value) && !value._isVue) {
+                } else if ((_.isArray(value) || _.isPlainObject(value)) && !Object.isFrozen(value) && !value._isVue) {
                     ob = new Observer(value);
                 }
                 if (ob && vm) {
@@ -7127,7 +7163,38 @@
             Observer.prototype.observeArray = function (items) {
                 var i = items.length;
                 while (i--) {
-                    this.observe(items[i]);
+                    var ob = this.observe(items[i]);
+                    if (ob) {
+                        (ob.parents || (ob.parents = [])).push(this);
+                    }
+                }
+            };
+            /**
+	 * Remove self from the parent list of removed objects.
+	 *
+	 * @param {Array} items
+	 */
+            Observer.prototype.unobserveArray = function (items) {
+                var i = items.length;
+                while (i--) {
+                    var ob = items[i] && items[i].__ob__;
+                    if (ob) {
+                        ob.parents.$remove(this);
+                    }
+                }
+            };
+            /**
+	 * Notify self dependency, and also parent Array dependency
+	 * if any.
+	 */
+            Observer.prototype.notify = function () {
+                this.dep.notify();
+                var parents = this.parents;
+                if (parents) {
+                    var i = parents.length;
+                    while (i--) {
+                        parents[i].notify();
+                    }
                 }
             };
             /**
@@ -7149,12 +7216,6 @@
                             dep.depend();
                             if (childOb) {
                                 childOb.dep.depend();
-                            }
-                            if (_.isArray(val)) {
-                                for (var e, i = 0, l = val.length; i < l; i++) {
-                                    e = val[i];
-                                    e && e.__ob__ && e.__ob__.dep.depend();
-                                }
                             }
                         }
                         return val;
@@ -7243,7 +7304,7 @@
                     }
                     var result = original.apply(this, args);
                     var ob = this.__ob__;
-                    var inserted;
+                    var inserted, removed;
                     switch (method) {
                     case 'push':
                         inserted = args;
@@ -7253,12 +7314,19 @@
                         break;
                     case 'splice':
                         inserted = args.slice(2);
+                        removed = result;
+                        break;
+                    case 'pop':
+                    case 'shift':
+                        removed = [result];
                         break;
                     }
                     if (inserted)
                         ob.observeArray(inserted);
+                    if (removed)
+                        ob.unobserveArray(removed);
                     // notify change
-                    ob.dep.notify();
+                    ob.notify();
                     return result;
                 });
             });
@@ -7315,7 +7383,7 @@
                     return;
                 }
                 ob.convert(key, val);
-                ob.dep.notify();
+                ob.notify();
                 if (ob.vms) {
                     var i = ob.vms.length;
                     while (i--) {
@@ -7352,7 +7420,7 @@
                 if (!ob || _.isReserved(key)) {
                     return;
                 }
-                ob.dep.notify();
+                ob.notify();
                 if (ob.vms) {
                     var i = ob.vms.length;
                     while (i--) {
@@ -8342,11 +8410,13 @@
             exports.$addChild = function (opts, BaseCtor) {
                 BaseCtor = BaseCtor || _.Vue;
                 opts = opts || {};
-                var parent = this;
                 var ChildVue;
+                var parent = this;
+                // transclusion context
+                var context = opts._context || parent;
                 var inherit = opts.inherit !== undefined ? opts.inherit : BaseCtor.options.inherit;
                 if (inherit) {
-                    var ctors = parent._childCtors;
+                    var ctors = context._childCtors;
                     ChildVue = ctors[BaseCtor.cid];
                     if (!ChildVue) {
                         var optionName = BaseCtor.options.name;
@@ -8354,9 +8424,7 @@
                         ChildVue = new Function('return function ' + className + ' (options) {' + 'this.constructor = ' + className + ';' + 'this._init(options) }')();
                         ChildVue.options = BaseCtor.options;
                         ChildVue.linker = BaseCtor.linker;
-                        // important: transcluded inline repeaters should
-                        // inherit from outer scope rather than host
-                        ChildVue.prototype = opts._context || this;
+                        ChildVue.prototype = context;
                         ctors[BaseCtor.cid] = ChildVue;
                     }
                 } else {
