@@ -3,7 +3,7 @@
     "description": "Simple, Fast & Composable MVVM for building interactive interfaces",
     "name": "vue",
     "main": "vue.common.js",
-    "version": "1.0.20",
+    "version": "1.0.21-csp",
     "tag": "master",
     "reposType": "npm",
     "dependencies": {},
