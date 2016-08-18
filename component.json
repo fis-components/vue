@@ -1,9 +1,9 @@
 {
     "repos": "https://github.com/vuejs/vue.git",
-    "description": "Simple, Fast & Composable MVVM for building interative interfaces",
+    "description": "Simple, Fast & Composable MVVM for building interactive interfaces",
     "name": "vue",
     "main": "vue",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "tag": "master",
     "reposType": "npm",
     "dependencies": {},
