@@ -1,9 +1,9 @@
 {
     "repos": "https://github.com/vuejs/vue.git",
-    "description": "Simple, Fast & Composable MVVM for building interactive interfaces",
+    "description": "Reactive, component-oriented view layer for modern web interfaces.",
     "name": "vue",
     "main": "vue.common.js",
-    "version": "1.0.26",
+    "version": "2.0.5",
     "tag": "master",
     "reposType": "npm",
     "dependencies": {},
